@@ -1,0 +1,20 @@
+ibkr_host: 127.0.0.1
+ibkr_port: 7497
+client_id: 19
+
+symbols:
+  - SPY
+  - QQQ
+  - IWM
+
+trade_size_usd: 500
+max_R: 8
+
+# Interpret as "percent drop magnitude".
+# Bot converts to negative internally, so it will ONLY trade on DOWN moves of 2.5% or more.
+threshold_pct: 2.5
+
+# Hold duration in trading days after entry fill date
+hold_days: 5
+
+timezone: America/New_York

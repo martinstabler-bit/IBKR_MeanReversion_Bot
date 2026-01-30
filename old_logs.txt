@@ -1,0 +1,2 @@
+Run complete.
+Signals taken: 0 | Open trades now: 0 | Cap: 8

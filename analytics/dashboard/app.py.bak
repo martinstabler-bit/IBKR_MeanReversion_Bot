@@ -1,0 +1,450 @@
+from pathlib import Path
+from datetime import datetime
+
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+
+
+# =========================
+# Paths
+# =========================
+APP_DIR = Path(__file__).resolve().parent
+BOT_ROOT = APP_DIR.parent.parent
+ANALYTICS_DIR = BOT_ROOT / "analytics"
+LOGS_DIR = ANALYTICS_DIR / "logs"
+
+RUNS_CSV = LOGS_DIR / "runs.csv"
+TRADES_CSV = BOT_ROOT / "trades.csv"
+ORDERS_CSV = LOGS_DIR / "orders.csv"
+ACCOUNT_CSV = LOGS_DIR / "account.csv"
+
+
+# =========================
+# Helpers
+# =========================
+def safe_read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except Exception as e:
+        st.error(f"Failed reading {path}: {e}")
+        return pd.DataFrame()
+
+def to_dt(series: pd.Series) -> pd.Series:
+    return pd.to_datetime(series, errors="coerce", utc=True)
+
+def safe_num(series: pd.Series) -> pd.Series:
+    return pd.to_numeric(series, errors="coerce")
+
+def safe_str(series: pd.Series) -> pd.Series:
+    return series.astype(str).fillna("")
+
+def normalize_bool(series: pd.Series) -> pd.Series:
+    if series is None or series.empty:
+        return pd.Series(dtype=bool)
+    return series.astype(str).str.strip().str.lower().isin(["true", "1", "yes", "y", "t"])
+
+def money(x) -> str:
+    try:
+        if pd.isna(x) or x == "":
+            return "—"
+        return f"${float(x):,.2f}"
+    except Exception:
+        return "—"
+
+def pct(x) -> str:
+    try:
+        if pd.isna(x):
+            return "—"
+        return f"{float(x):.2%}"
+    except Exception:
+        return "—"
+
+def ms(x) -> str:
+    try:
+        if pd.isna(x) or x == "":
+            return "—"
+        return f"{float(x):.0f} ms"
+    except Exception:
+        return "—"
+
+def human_age(dt: pd.Timestamp) -> str:
+    if pd.isna(dt):
+        return "—"
+    now = pd.Timestamp.utcnow()
+    delta = now - dt
+    secs = delta.total_seconds()
+    if secs < 60:
+        return f"{int(secs)}s ago"
+    if secs < 3600:
+        return f"{int(secs // 60)}m ago"
+    if secs < 86400:
+        return f"{int(secs // 3600)}h ago"
+    return f"{int(secs // 86400)}d ago"
+
+
+# =========================
+# Streamlit config
+# =========================
+st.set_page_config(page_title="IBKR Mean Reversion — Dashboard", layout="wide")
+st.title("IBKR Mean Reversion Bot — Dashboard")
+st.caption(f"Bot root: {BOT_ROOT}")
+
+st.sidebar.header("Controls")
+auto_refresh = st.sidebar.checkbox("Auto-refresh", value=False)
+refresh_seconds = st.sidebar.number_input("Refresh interval (seconds)", 5, 600, 30, step=5)
+show_raw = st.sidebar.checkbox("Show raw tables", value=False)
+
+if auto_refresh:
+    st.autorefresh(interval=int(refresh_seconds * 1000), key="refresh")
+
+
+# =========================
+# Load data
+# =========================
+runs = safe_read_csv(RUNS_CSV)
+trades = safe_read_csv(TRADES_CSV)
+orders = safe_read_csv(ORDERS_CSV)
+acct = safe_read_csv(ACCOUNT_CSV)
+
+# Normalize runs
+if not runs.empty:
+    if "ts_local" in runs.columns:
+        runs["ts_local"] = to_dt(runs["ts_local"])
+    if "duration_ms" in runs.columns:
+        runs["duration_ms"] = safe_num(runs["duration_ms"])
+    if "tws_connected" in runs.columns:
+        runs["tws_connected"] = normalize_bool(runs["tws_connected"])
+    for c in ["status","reason","run_id","ib_host","ib_port","client_id"]:
+        if c in runs.columns:
+            runs[c] = safe_str(runs[c])
+
+# Normalize trades
+if not trades.empty:
+    for c in ["entry_date","exit_date"]:
+        if c in trades.columns:
+            trades[c] = to_dt(trades[c])
+    for c in ["entry_price","exit_price","quantity"]:
+        if c in trades.columns:
+            trades[c] = safe_num(trades[c])
+    for c in ["trade_id","symbol","status","note","entry_orderId","exit_orderId"]:
+        if c in trades.columns:
+            trades[c] = safe_str(trades[c])
+    if "symbol" in trades.columns:
+        trades["symbol"] = trades["symbol"].astype(str).str.upper().str.strip()
+    if "status" in trades.columns:
+        trades["status"] = trades["status"].astype(str).str.strip()
+
+# Normalize account snapshots
+if not acct.empty:
+    if "ts_local" in acct.columns:
+        acct["ts_local"] = to_dt(acct["ts_local"])
+    for c in [
+        "NetLiquidation","TotalCashValue","GrossPositionValue",
+        "UnrealizedPnL","RealizedPnL","AvailableFunds","BuyingPower","EquityWithLoanValue"
+    ]:
+        if c in acct.columns:
+            acct[c] = safe_num(acct[c])
+    for c in ["account","run_id"]:
+        if c in acct.columns:
+            acct[c] = safe_str(acct[c])
+
+
+# =========================
+# Quick Status
+# =========================
+st.subheader("Quick Status")
+c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.2, 1.4])
+
+with c1:
+    st.write("**runs.csv**")
+    st.write("✅ found" if RUNS_CSV.exists() else "❌ missing")
+    st.caption(str(RUNS_CSV))
+
+with c2:
+    st.write("**trades.csv**")
+    st.write("✅ found" if TRADES_CSV.exists() else "❌ missing")
+    st.caption(str(TRADES_CSV))
+
+with c3:
+    st.write("**account.csv**")
+    st.write("✅ found" if ACCOUNT_CSV.exists() else "❌ missing (run bot once with TWS on)")
+    st.caption(str(ACCOUNT_CSV))
+
+with c4:
+    if not runs.empty and "ts_local" in runs.columns and runs["ts_local"].notna().any():
+        last_ts = runs["ts_local"].dropna().sort_values().iloc[-1]
+        st.write("**Last run**")
+        st.metric("Timestamp", str(last_ts))
+        st.caption(human_age(last_ts))
+    else:
+        st.write("**Last run**")
+        st.metric("Timestamp", "—")
+
+st.divider()
+
+
+# =========================
+# IBKR Account (Automated)
+# =========================
+st.header("IBKR Account (Automated)")
+
+if acct.empty or "ts_local" not in acct.columns or not acct["ts_local"].notna().any():
+    st.warning("No IBKR account snapshots yet. Turn on TWS (paper) and run:  py run_bot.py")
+else:
+    a = acct.dropna(subset=["ts_local"]).sort_values("ts_local")
+    last = a.iloc[-1]
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.metric("Account Value (NetLiq)", money(last.get("NetLiquidation", "")))
+        st.caption(f"Acct: {last.get('account','')}")
+    with k2:
+        st.metric("Total Cash", money(last.get("TotalCashValue", "")))
+    with k3:
+        st.metric("Gross Positions", money(last.get("GrossPositionValue", "")))
+    with k4:
+        st.metric("Unrealized P&L", money(last.get("UnrealizedPnL", "")))
+
+    k5, k6, k7, k8 = st.columns(4)
+    with k5:
+        st.metric("Realized P&L", money(last.get("RealizedPnL", "")))
+    with k6:
+        st.metric("Available Funds", money(last.get("AvailableFunds", "")))
+    with k7:
+        st.metric("Buying Power", money(last.get("BuyingPower", "")))
+    with k8:
+        st.metric("Snapshot age", human_age(last["ts_local"]))
+
+st.divider()
+
+
+# =========================
+# Bot Health
+# =========================
+st.subheader("Bot Health")
+
+if runs.empty or "ts_local" not in runs.columns or not runs["ts_local"].notna().any():
+    st.info("No runs yet.")
+else:
+    r = runs.dropna(subset=["ts_local"]).sort_values("ts_local")
+    last_ts = r["ts_local"].iloc[-1]
+
+    h1, h2, h3, h4 = st.columns(4)
+    with h1:
+        st.metric("Last run age", human_age(last_ts))
+    with h2:
+        cutoff = pd.Timestamp.utcnow() - pd.Timedelta(hours=24)
+        st.metric("Runs (last 24h)", int((r["ts_local"] >= cutoff).sum()))
+    with h3:
+        st.metric("TWS connected rate", pct(r["tws_connected"].mean()) if "tws_connected" in r.columns else "—")
+    with h4:
+        st.metric("Median run time", ms(r["duration_ms"].median()) if "duration_ms" in r.columns else "—")
+
+st.divider()
+
+
+# =========================
+# Strategy Performance Analytics
+# =========================
+st.header("Strategy Performance Analytics")
+
+if trades.empty:
+    st.info("No trades recorded yet. Strategy analytics will populate as soon as fills sync into trades.csv.")
+else:
+    t = trades.copy()
+
+    # Define "closed trade with fills"
+    has_entry = t["entry_price"].notna() & t["quantity"].notna()
+    has_exit = t["exit_price"].notna()
+    is_closed = t["status"].str.upper().eq("CLOSED") | has_exit
+
+    closed = t[has_entry & has_exit].copy()
+    open_ = t[t["status"].str.upper().eq("OPEN")].copy()
+
+    # Compute realized P&L per trade
+    if not closed.empty:
+        closed["pnl"] = (closed["exit_price"] - closed["entry_price"]) * closed["quantity"]
+
+        # Holding time (days)
+        if "entry_date" in closed.columns and "exit_date" in closed.columns:
+            dd = (closed["exit_date"] - closed["entry_date"]).dt.total_seconds() / 86400.0
+            closed["hold_days"] = dd
+        else:
+            closed["hold_days"] = pd.NA
+
+        # Core metrics
+        n = int(len(closed))
+        wins = closed["pnl"] > 0
+        win_rate = float(wins.mean()) if n else float("nan")
+
+        total_pnl = float(closed["pnl"].sum()) if n else 0.0
+        avg_pnl = float(closed["pnl"].mean()) if n else float("nan")
+        med_pnl = float(closed["pnl"].median()) if n else float("nan")
+
+        avg_win = float(closed.loc[wins, "pnl"].mean()) if wins.any() else float("nan")
+        avg_loss = float(closed.loc[~wins, "pnl"].mean()) if (~wins).any() else float("nan")
+
+        gross_profit = float(closed.loc[wins, "pnl"].sum()) if wins.any() else 0.0
+        gross_loss = float(closed.loc[~wins, "pnl"].sum()) if (~wins).any() else 0.0  # negative
+        profit_factor = (gross_profit / abs(gross_loss)) if gross_loss != 0 else float("nan")
+
+        best_trade = float(closed["pnl"].max()) if n else float("nan")
+        worst_trade = float(closed["pnl"].min()) if n else float("nan")
+
+        avg_hold = float(closed["hold_days"].dropna().mean()) if closed["hold_days"].notna().any() else float("nan")
+
+        # Equity curve: cumulative realized P&L (strategy dollars), indexed version too
+        ec = closed.dropna(subset=["exit_date"]).copy()
+        ec = ec.sort_values("exit_date")
+        ec["cum_pnl"] = ec["pnl"].cumsum()
+        ec["equity_index_100"] = 100.0 + (ec["cum_pnl"] / max(1.0, abs(ec["cum_pnl"].iloc[0]) if len(ec) else 1.0)) * 0.0
+        # Better: index to 100 using trade P&L cumulatively relative to 0 baseline:
+        ec["equity_index_100"] = 100.0 + ec["cum_pnl"] / 1000.0  # simple scaling so it moves; not "account equity"
+
+        # Realized drawdown on cum_pnl curve (baseline 0)
+        peak = ec["cum_pnl"].cummax()
+        dd = ec["cum_pnl"] - peak
+        max_dd = float(dd.min()) if len(dd) else float("nan")
+
+        # Monthly P&L
+        ec["month"] = ec["exit_date"].dt.to_period("M").dt.to_timestamp()
+        monthly = ec.groupby("month", as_index=False)["pnl"].sum()
+
+        # P&L by symbol
+        by_sym = closed.groupby("symbol", as_index=False)["pnl"].agg(["count", "sum", "mean"]).reset_index()
+        by_sym.columns = ["Symbol", "Trades", "Total_PnL", "Avg_PnL"]
+        by_sym = by_sym.sort_values("Total_PnL", ascending=False)
+
+        # KPI row
+        a1, a2, a3, a4, a5 = st.columns(5)
+        with a1:
+            st.metric("Closed trades", f"{n}")
+        with a2:
+            st.metric("Total realized P&L", money(total_pnl))
+        with a3:
+            st.metric("Win rate", pct(win_rate))
+        with a4:
+            st.metric("Profit factor", f"{profit_factor:.2f}" if pd.notna(profit_factor) else "—")
+        with a5:
+            st.metric("Expectancy ($/trade)", money(avg_pnl) if pd.notna(avg_pnl) else "—")
+
+        b1, b2, b3, b4, b5 = st.columns(5)
+        with b1:
+            st.metric("Avg win", money(avg_win) if pd.notna(avg_win) else "—")
+        with b2:
+            st.metric("Avg loss", money(avg_loss) if pd.notna(avg_loss) else "—")
+        with b3:
+            st.metric("Median trade", money(med_pnl) if pd.notna(med_pnl) else "—")
+        with b4:
+            st.metric("Best trade", money(best_trade) if pd.notna(best_trade) else "—")
+        with b5:
+            st.metric("Worst trade", money(worst_trade) if pd.notna(worst_trade) else "—")
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Avg hold (days)", f"{avg_hold:.2f}" if pd.notna(avg_hold) else "—")
+        with c2:
+            st.metric("Max drawdown (realized, $)", money(max_dd) if pd.notna(max_dd) else "—")
+        with c3:
+            st.metric("Trades per symbol (top)", f"{int(by_sym['Trades'].max())}" if not by_sym.empty else "—")
+
+        st.divider()
+
+        # Charts
+        ch1, ch2 = st.columns(2)
+        with ch1:
+            st.subheader("Equity curve (cumulative realized P&L, $)")
+            fig = px.line(ec, x="exit_date", y="cum_pnl", hover_data=["symbol", "pnl"])
+            st.plotly_chart(fig, use_container_width=True)
+
+        with ch2:
+            st.subheader("Monthly P&L (realized, $)")
+            fig = px.bar(monthly, x="month", y="pnl")
+            st.plotly_chart(fig, use_container_width=True)
+
+        ch3, ch4 = st.columns(2)
+        with ch3:
+            st.subheader("P&L by symbol (total)")
+            fig = px.bar(by_sym.head(15), x="Symbol", y="Total_PnL")
+            st.plotly_chart(fig, use_container_width=True)
+
+        with ch4:
+            st.subheader("Trade P&L distribution")
+            fig = px.histogram(closed, x="pnl", nbins=30)
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        st.subheader("Closed trades (computed)")
+        show_cols = [c for c in [
+            "trade_id","symbol","entry_date","exit_date","entry_price","exit_price","quantity","pnl","hold_days","note"
+        ] if c in closed.columns]
+        st.dataframe(closed.sort_values("exit_date", ascending=False)[show_cols].head(300), use_container_width=True)
+
+    else:
+        st.info(
+            "No CLOSED trades with fills yet. Once entries/exits are filled and synced into trades.csv "
+            "(entry_price, exit_price, quantity), strategy analytics will populate."
+        )
+
+    # Open trades snapshot
+    st.divider()
+    st.subheader("Open trades snapshot")
+
+    if open_.empty:
+        st.info("No OPEN trades right now.")
+    else:
+        open_view = open_.copy()
+        if "entry_date" in open_view.columns:
+            open_view["days_open"] = (pd.Timestamp.utcnow() - open_view["entry_date"]).dt.total_seconds() / 86400.0
+        else:
+            open_view["days_open"] = pd.NA
+
+        open_view["notional_entry"] = open_view["entry_price"] * open_view["quantity"]
+
+        o1, o2, o3 = st.columns(3)
+        with o1:
+            st.metric("Open trades", f"{len(open_view)}")
+        with o2:
+            st.metric("Total notional (entry)", money(open_view["notional_entry"].sum()) if open_view["notional_entry"].notna().any() else "—")
+        with o3:
+            st.metric("Oldest open (days)", f"{open_view['days_open'].max():.1f}" if open_view["days_open"].notna().any() else "—")
+
+        show_cols = [c for c in [
+            "trade_id","symbol","entry_date","entry_price","quantity","notional_entry","days_open","status","note"
+        ] if c in open_view.columns]
+        st.dataframe(open_view.sort_values("days_open", ascending=False)[show_cols].head(300), use_container_width=True)
+
+st.divider()
+
+
+# =========================
+# Tables (Health)
+# =========================
+st.subheader("Latest runs")
+if runs.empty:
+    st.info("No runs to show yet.")
+else:
+    cols = [c for c in ["ts_local","run_id","status","reason","duration_ms","tws_connected","ib_host","ib_port","client_id"] if c in runs.columns]
+    st.dataframe(runs.sort_values("ts_local", ascending=False).head(50)[cols], use_container_width=True)
+
+st.subheader("Trades (raw)")
+if trades.empty:
+    st.info("No trades to show yet.")
+else:
+    st.dataframe(trades.tail(300), use_container_width=True)
+
+if show_raw:
+    st.divider()
+    st.subheader("Raw tables")
+    st.write("runs.csv:", str(RUNS_CSV))
+    st.dataframe(runs.tail(200) if not runs.empty else pd.DataFrame(), use_container_width=True)
+
+    st.write("account.csv:", str(ACCOUNT_CSV))
+    st.dataframe(acct.tail(200) if not acct.empty else pd.DataFrame(), use_container_width=True)
+
+    st.write("orders.csv:", str(ORDERS_CSV))
+    st.dataframe(orders.tail(200) if not orders.empty else pd.DataFrame(), use_container_width=True)

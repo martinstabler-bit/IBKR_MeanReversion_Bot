@@ -1,0 +1,19 @@
+trade_id,symbol,entry_date,exit_date,entry_price,exit_price,quantity,status,entry_orderId,exit_orderId,note
+8fd41b5a-27ae-4b28-85d3-10c1a7e4913b,SPY,2026-01-29,,690.64,690.64,1,CLOSED_RECONCILED,53,,"TEST: entry filled (avg=690.6400, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+e9954570-ed3f-452c-b2b1-6503ff214047,SPY,2026-01-29,,690.23,690.23,1,CLOSED_RECONCILED,57,,"TEST: entry filled (avg=690.2300, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+a71432e2-a617-41e5-9f6f-74f7de46d9dd,SPY,2026-01-29,,690.15,690.06,1,CLOSED,61,65,"TEST: exit filled (avg=690.0600, qty=1)."
+ca9fa3da-6bb0-4748-892f-a4468d966845,SPY,,,689.48,689.48,1,CLOSED_RECONCILED,69,,"TEST: entry filled (avg=689.4800, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+77f10dce-3bf5-4851-a442-084e46e3523b,SPY,,,689.39,689.39,11,CLOSED_RECONCILED,73,,"TEST: entry filled (avg=689.3900, qty=11). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+fff3d4a8-cd59-495d-b82d-0aad161631f4,SPY,,,689.32,689.32,2,CLOSED_RECONCILED,77,,"TEST: entry filled (avg=689.3200, qty=2). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+dfc1bdd6-9702-4921-a38a-55725dcfbebe,SPY,,,689.29,690.93,10,CLOSED,81,157,"TEST: sellpos filled (avg=690.9300, qty=26)."
+e57948c5-1f64-4de1-9ab3-0ecb4825c5c7,SPY,,,689.07,690.14,1,CLOSED,85,153,"TEST: exit filled (avg=690.1400, qty=1)."
+24157c2c-ed8d-4967-8694-538995b11d6d,SPY,,,688.99,690.14,1,CLOSED,89,149,"TEST: exit filled (avg=690.1400, qty=1)."
+fdf0ff12-006c-4db8-a917-2c0d91729f80,SPY,,,689.01,690.21,1,CLOSED,93,145,"TEST: exit filled (avg=690.2100, qty=1)."
+e9684129-5e8c-4ffd-af81-f4afe42ec0b1,SPY,,,688.99,690.12,1,CLOSED,97,141,"TEST: exit filled (avg=690.1200, qty=1)."
+9217a8db-646c-4bfc-a2b7-54a2a6dc9470,SPY,,,688.95,690.24,1,CLOSED,101,137,"TEST: exit filled (avg=690.2400, qty=1)."
+5966f628-0e88-4511-be84-9fbb9a344c6d,SPY,,,689.18,690.22,1,CLOSED,105,133,"TEST: exit filled (avg=690.2200, qty=1)."
+99bb324a-6459-49cd-b0b3-35fe5aedf65a,NKE,,,61.55,61.32,1,CLOSED,109,165,Exit filled (synced).
+69762fda-8ece-4e39-9d9e-7062e5cb6f65,SPY,,,689.42,690.31,1,CLOSED,113,129,"TEST: exit filled (avg=690.3100, qty=1)."
+75529947-4793-4a2f-8ba5-7fec9dcac538,NKE,,,61.53,61.33,11,CLOSED,117,161,Exit filled (synced).
+480f88d1-576c-414e-9ee2-263b35fd5d68,BA,,,230.66,230.5,10,CLOSED,121,173,"TEST: exit filled (avg=230.5000, qty=10)."
+fbaa816e-1f1a-4565-b15f-797535b9a3e7,UVXY,,,37.93,36.82,10,CLOSED,125,169,"TEST: exit filled (avg=36.8200, qty=10)."

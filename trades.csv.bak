@@ -1,0 +1,4 @@
+trade_id,symbol,entry_date,exit_date,entry_price,exit_price,quantity,status,entry_orderId,exit_orderId,note
+8fd41b5a-27ae-4b28-85d3-10c1a7e4913b,SPY,2026-01-29,,690.64,,1,OPEN,53,,"TEST: entry filled (avg=690.6400, qty=1)."
+e9954570-ed3f-452c-b2b1-6503ff214047,SPY,2026-01-29,,690.23,,1,OPEN,57,,"TEST: entry filled (avg=690.2300, qty=1)."
+a71432e2-a617-41e5-9f6f-74f7de46d9dd,SPY,2026-01-29,,690.15,690.06,1,CLOSED,61,65,"TEST: exit filled (avg=690.0600, qty=1)."
