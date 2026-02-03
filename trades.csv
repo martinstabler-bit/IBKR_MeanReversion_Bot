@@ -1,7 +1,7 @@
 trade_id,symbol,entry_date,exit_date,entry_price,exit_price,quantity,status,entry_orderId,exit_orderId,note
-8fd41b5a-27ae-4b28-85d3-10c1a7e4913b,SPY,2026-01-29 00:00:00,,690.64,690.64,1,CLOSED_RECONCILED,53,,"TEST: entry filled (avg=690.6400, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
-e9954570-ed3f-452c-b2b1-6503ff214047,SPY,2026-01-29 00:00:00,,690.23,690.23,1,CLOSED_RECONCILED,57,,"TEST: entry filled (avg=690.2300, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
-a71432e2-a617-41e5-9f6f-74f7de46d9dd,SPY,2026-01-29 00:00:00,,690.15,690.06,1,CLOSED,61,65,"TEST: exit filled (avg=690.0600, qty=1)."
+8fd41b5a-27ae-4b28-85d3-10c1a7e4913b,SPY,2026-01-29,,690.64,690.64,1,CLOSED_RECONCILED,53,,"TEST: entry filled (avg=690.6400, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+e9954570-ed3f-452c-b2b1-6503ff214047,SPY,2026-01-29,,690.23,690.23,1,CLOSED_RECONCILED,57,,"TEST: entry filled (avg=690.2300, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
+a71432e2-a617-41e5-9f6f-74f7de46d9dd,SPY,2026-01-29,,690.15,690.06,1,CLOSED,61,65,"TEST: exit filled (avg=690.0600, qty=1)."
 ca9fa3da-6bb0-4748-892f-a4468d966845,SPY,,,689.48,689.48,1,CLOSED_RECONCILED,69,,"TEST: entry filled (avg=689.4800, qty=1). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
 77f10dce-3bf5-4851-a442-084e46e3523b,SPY,,,689.39,689.39,11,CLOSED_RECONCILED,73,,"TEST: entry filled (avg=689.3900, qty=11). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
 fff3d4a8-cd59-495d-b82d-0aad161631f4,SPY,,,689.32,689.32,2,CLOSED_RECONCILED,77,,"TEST: entry filled (avg=689.3200, qty=2). | Reconciled closed: IBKR position=0; exit_price set to entry_price (placeholder)."
